@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics Mastery Quiz</title>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --success: #10b981;
+            --error: #ef4444;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 650px;
+            width: 100%;
+            background: var(--card);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.4s ease;
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { margin: 0; font-size: 1.75rem; color: var(--text); }
+        #q-count { color: var(--text-light); font-size: 0.9rem; margin-top: 5px; }
+
+        .question-text { font-size: 1.3rem; font-weight: 600; line-height: 1.4; margin-bottom: 20px; }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        th, td { padding: 12px; text-align: center; border-bottom: 1px solid var(--border); }
+        th { background-color: #f1f5f9; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .option-btn {
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .option-btn:hover:not(:disabled) { border-color: var(--primary); background-color: #f5f3ff; }
+        .option-btn.correct { background-color: var(--success) !important; color: white; border-color: var(--success); }
+        .option-btn.wrong { background-color: var(--error) !important; color: white; border-color: var(--error); }
+
+        .hint-wrapper { margin-top: 20px; }
+        .hint-toggle {
+            background: none; border: none; color: var(--primary); 
+            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px;
+            padding: 0; font-size: 0.95rem;
+        }
+        .hint-content {
+            display: none; margin-top: 10px; padding: 12px;
+            background: #fdf2f8; border-radius: 8px; border-left: 4px solid var(--primary);
+            font-style: italic; color: #4338ca;
+        }
+
+        .feedback { 
+            margin-top: 25px; padding: 18px; border-radius: 12px; display: none; 
+            font-weight: 500; line-height: 1.8;
+        }
+
+        .next-btn { 
+            margin-top: 25px; background: var(--primary); color: white; 
+            width: 100%; border: none; padding: 16px; border-radius: 12px;
+            font-size: 1.1rem; font-weight: 700; cursor: pointer; display: none;
+        }
+
+        .mistake-item {
+            background: #fef2f2; border: 1px solid #fee2e2; padding: 15px;
+            border-radius: 12px; margin-bottom: 15px; text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress-container"><div id="progress-bar"></div></div>
+    
+    <div class="header">
+        <h1>Mean & Median Mastery</h1>
+        <div id="q-count">Question 1 of 10</div>
+    </div>
+
+    <div id="quiz-app">
+        <div class="question-box">
+            <div id="question" class="question-text"></div>
+            <div id="table-container"></div>
+            <div id="options" class="options-grid"></div>
+        </div>
+
+        <div class="hint-wrapper">
+            <button class="hint-toggle" onclick="toggleHint()">
+                <span>💡</span> <span>View Formula Hint</span>
+            </button>
+            <div id="hint-content" class="hint-content"></div>
+        </div>
+
+        <div id="feedback" class="feedback"></div>
+        <button id="next-button" class="next-btn" onclick="nextQuestion()">Continue &rarr;</button>
+    </div>
+</div>
+
+<script>
+    const questions = [
+        {
+            topic: "Mean (Discrete)",
+            q: "Calculate the mean (\\(\\bar{x}\\)) for: 12, 18, 5, 10, 15.",
+            options: ["12", "10", "15", "60"],
+            answer: "12",
+            hint: "\\(\\bar{x} = \\frac{\\sum x}{n}\\)",
+            rationale: "\\(\\bar{x} = \\frac{12+18+5+10+15}{5} = \\frac{60}{5} = 12\\)"
+        },
+        {
+            topic: "Mean (Discrete)",
+            q: "Determine the mean (\\(\\bar{x}\\)) for: 25, 15, 30, 10.",
+            options: ["20", "25", "80", "15"],
+            answer: "20",
+            hint: "\\(\\bar{x} = \\frac{\\sum x}{n}\\)",
+            rationale: "\\(\\bar{x} = \\frac{25+15+30+10}{4} = \\frac{80}{4} = 20\\)"
+        },
+        {
+            topic: "Mean (Frequency Tables)",
+            q: "Calculate the mean (\\(\\bar{x}\\)) from this frequency table:",
+            isTable: true,
+            tableData: [["Value (x)", "Freq (f)"], ["10", "2"], ["20", "5"], ["30", "3"]],
+            options: ["21", "20", "10", "210"],
+            answer: "21",
+            hint: "\\(\\bar{x} = \\frac{\\sum fx}{\\sum f}\\)",
+            rationale: "\\(\\bar{x} = \\frac{(10\\times2)+(20\\times5)+(30\\times3)}{10} = \\frac{210}{10} = 21\\)"
+        },
+        {
+            topic: "Mean (Frequency Tables)",
+            q: "Find the mean (\\(\\bar{x}\\)) from this distribution:",
+            isTable: true,
+            tableData: [["Value (x)", "Freq (f)"], ["2", "5"], ["4", "3"], ["6", "2"]],
+            options: ["3.4", "4", "34", "3"],
+            answer: "3.4",
+            hint: "\\(\\bar{x} = \\frac{\\sum fx}{\\sum f}\\)",
+            rationale: "\\(\\bar{x} = \\frac{(2\\times5)+(4\\times3)+(6\\times2)}{10} = \\frac{34}{10} = 3.4\\)"
+        },
+        {
+            topic: "Median (Odd Sets)",
+            q: "Find the median of the data set: 15, 8, 22, 5, 12.",
+            options: ["12", "22", "12.4", "8"],
+            answer: "12",
+            hint: "Median Position = \\(\\frac{n+1}{2}\\). Sort data first.",
+            rationale: "Sorted Data: 5, 8, 12, 15, 22.<br>Position: \\(\\frac{5+1}{2} = 3^{rd}\\) value.<br>Median = 12."
+        },
+        {
+            topic: "Median (Odd Sets)",
+            q: "What is the median of this data set: 40, 10, 50, 30, 20?",
+            options: ["30", "50", "20", "30.5"],
+            answer: "30",
+            hint: "Median Position = \\(\\frac{n+1}{2}\\). Sort data first.",
+            rationale: "Sorted Data: 10, 20, 30, 40, 50.<br>Position: \\(\\frac{5+1}{2} = 3^{rd}\\) value.<br>Median = 30."
+        },
+        {
+            topic: "Median (Even Sets)",
+            q: "Determine the median of the data set: 14, 2, 20, 8.",
+            options: ["11", "8", "14", "11.5"],
+            answer: "11",
+            hint: "Average the two middle values after sorting.",
+            rationale: "Sorted Data: 2, 8, 14, 20.<br>Middle Values: 8 and 14.<br>Calculation: \\(\\frac{8+14}{2} = 11\\)."
+        },
+        {
+            topic: "Median (Even Sets)",
+            q: "Calculate the median for the set: 5, 25, 15, 10.",
+            options: ["12.5", "15", "10", "20"],
+            answer: "12.5",
+            hint: "Average the two middle values after sorting.",
+            rationale: "Sorted Data: 5, 10, 15, 25.<br>Middle Values: 10 and 15.<br>Calculation: \\(\\frac{10+15}{2} = 12.5\\)."
+        },
+        {
+            topic: "Mean (Grouped Intervals)",
+            q: "Mean for grouped data with equal intervals:",
+            isTable: true,
+            tableData: [["Interval", "Freq (f)"], ["10 < x ≤ 20", "2"], ["20 < x ≤ 30", "6"], ["30 < x ≤ 40", "2"]],
+            options: ["25", "30", "250", "20"],
+            answer: "25",
+            hint: "\\(\\bar{x} = \\frac{\\sum f x_m}{\\sum f}\\) (where \\(x_m\\) is midpoint)",
+            rationale: "Midpoints (\\(x_m\\)): 15, 25, 35.<br>\\(\\bar{x} = \\frac{(15\\times2)+(25\\times6)+(35\\times2)}{10} = \\frac{250}{10} = 25\\)"
+        },
+        {
+            topic: "Mean (Grouped Intervals)",
+            q: "Find the estimated mean for this frequency distribution:",
+            isTable: true,
+            tableData: [["Interval", "Freq (f)"], ["0 < x ≤ 10", "4"], ["10 < x ≤ 20", "4"], ["20 < x ≤ 30", "2"]],
+            options: ["13", "15", "130", "10"],
+            answer: "13",
+            hint: "\\(\\bar{x} = \\frac{\\sum f x_m}{\\sum f}\\) (where \\(x_m\\) is midpoint)",
+            rationale: "Midpoints (\\(x_m\\)): 5, 15, 25.<br>\\(\\bar{x} = \\frac{(5\\times4)+(15\\times4)+(25\\times2)}{10} = \\frac{130}{10} = 13\\)"
+        }
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+    let mistakes = [];
+
+    function loadQuestion() {
+        const q = questions[currentQ];
+        document.getElementById("q-count").innerText = `Question ${currentQ + 1} of ${questions.length}`;
+        document.getElementById("progress-bar").style.width = `${((currentQ) / questions.length) * 100}%`;
+        document.getElementById("question").innerHTML = q.q;
+        document.getElementById("feedback").style.display = "none";
+        document.getElementById("next-button").style.display = "none";
+        document.getElementById("hint-content").style.display = "none";
+        document.getElementById("hint-content").innerHTML = q.hint;
+        
+        const tableContainer = document.getElementById("table-container");
+        tableContainer.innerHTML = "";
+        if(q.isTable) {
+            let table = "<table>";
+            q.tableData.forEach((row, i) => {
+                table += "<tr>";
+                row.forEach(cell => table += i === 0 ? `<th>${cell}</th>` : `<td>${cell}</td>`);
+                table += "</tr>";
+            });
+            tableContainer.innerHTML = table + "</table>";
+        }
+
+        const optionsContainer = document.getElementById("options");
+        optionsContainer.innerHTML = "";
+        q.options.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(btn, opt);
+            optionsContainer.appendChild(btn);
+        });
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function toggleHint() {
+        const content = document.getElementById("hint-content");
+        content.style.display = content.style.display === "none" ? "block" : "none";
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function checkAnswer(btn, choice) {
+        const q = questions[currentQ];
+        const feedback = document.getElementById("feedback");
+        document.querySelectorAll(".option-btn").forEach(b => b.disabled = true);
+
+        if(choice === q.answer) {
+            btn.classList.add("correct");
+            feedback.innerHTML = "✨ <strong>CORRECT!</strong><br>" + q.rationale;
+            feedback.style.background = "#dcfce7"; feedback.style.color = "#166534";
+            score++;
+        } else {
+            btn.classList.add("wrong");
+            feedback.innerHTML = "❌ <strong>INCORRECT</strong><br>The correct answer was " + q.answer + ".<br>" + q.rationale;
+            feedback.style.background = "#fee2e2"; feedback.style.color = "#991b1b";
+            mistakes.push({...q, userAns: choice});
+        }
+        feedback.style.display = "block";
+        document.getElementById("next-button").style.display = "block";
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function nextQuestion() {
+        currentQ++;
+        if(currentQ < questions.length) loadQuestion(); else showSummary();
+    }
+
+    function showSummary() {
+        document.getElementById("progress-bar").style.width = "100%";
+        let topicsMap = {};
+        questions.forEach(q => topicsMap[q.topic] = (topicsMap[q.topic] || 0) + 1);
+        let mistakeTopics = mistakes.map(m => m.topic);
+        let uniqueTopics = [...new Set(questions.map(q => q.topic))];
+        
+        let strengths = uniqueTopics.filter(t => !mistakeTopics.includes(t));
+        let focus = [...new Set(mistakeTopics)];
+
+        let summaryHTML = `
+            <div style="text-align: center;">
+                <h2>Quiz Complete!</h2>
+                <div style="font-size: 3rem; font-weight: 800; color: var(--primary); margin: 20px 0;">${score}/${questions.length}</div>
+                
+                <div style="text-align: left; background: #f8fafc; padding: 20px; border-radius: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                    <h3 style="font-size: 1rem; margin-top: 0;">Performance Insights:</h3>
+                    <p><strong>✅ Strengths:</strong> ${strengths.length ? strengths.join(", ") : "Keep practicing to find your first mastery topic!"}</p>
+                    <p><strong>🔍 Focus Areas:</strong> ${focus.length ? focus.join(", ") : "None! You've mastered all areas."}</p>
+                </div>
+
+                <div id="mistake-review-container" style="display:none; margin-top: 20px;">
+                    <h3 style="text-align: left; margin-bottom: 15px;">Mistake Review:</h3>
+                    ${mistakes.map(m => `
+                        <div class="mistake-item">
+                            <strong>${m.q}</strong><br>
+                            <span style="color: var(--error)">Your Answer: ${m.userAns}</span> | 
+                            <span style="color: var(--success)">Correct: ${m.answer}</span>
+                            <div style="margin-top: 8px; border-top: 1px solid #fee2e2; padding-top: 8px; font-size: 0.9rem;">
+                                ${m.rationale}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <button onclick="document.getElementById('mistake-review-container').style.display='block'; this.style.display='none';" class="next-btn" style="display:${mistakes.length ? 'block' : 'none'}; background: #6366f1;">Review Mistakes</button>
+                <button onclick="downloadSummary()" class="next-btn" style="display:block; background:#059669; margin-top: 10px;">Download Results (.txt)</button>
+                <button onclick="location.reload()" class="next-btn" style="display:block; background:var(--text-light); margin-top: 10px;">Restart Quiz</button>
+            </div>
+        `;
+        document.getElementById("quiz-app").innerHTML = summaryHTML;
+        if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    function downloadSummary() {
+        const content = `STATS RESULTS\nScore: ${score}/10\nDate: ${new Date().toLocaleString()}\nMistakes: ${mistakes.length}`;
+        const blob = new Blob([content], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'results.txt';
+        a.click();
+    }
+
+    loadQuestion();
+</script>
+</body>
+</html>
